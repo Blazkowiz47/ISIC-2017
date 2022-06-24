@@ -1,4 +1,6 @@
-dataset/
+dataset/train/
+dataset/test/
+dataset/validation/
 checkpoints/
 .ipynb_checkpoints/
 __pycache__/
