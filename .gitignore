@@ -5,4 +5,3 @@ checkpoints/
 .ipynb_checkpoints/
 __pycache__/
 utils/__pycache__/
-key.json
