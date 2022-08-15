@@ -20,6 +20,7 @@ class CustomDataset:
         masks = sorted(glob(os.path.join(dir , self.mask_dir+'\\*')))
         return images , masks
 
+
     def decode_img(self,img,channels):
         img = tf.image.decode_jpeg(img, channels=channels)
         img = tf.image.convert_image_dtype(img, tf.float32)
@@ -36,7 +37,6 @@ class CustomDataset:
         return img, mask
 
 
-
     def tf_dataset(self,x,y):
         dataset = tf.data.Dataset.from_tensor_slices((x,y))
         dataset = dataset.shuffle(buffer_size=1000)
@@ -44,6 +44,8 @@ class CustomDataset:
         dataset = dataset.batch(batch_size=self.batch_size)
         dataset = dataset.prefetch(2)
         return dataset
+
+        
     def get_Dataset(self):
         images , masks = self.load_data(self.dir)
         return  self.tf_dataset(images , masks)

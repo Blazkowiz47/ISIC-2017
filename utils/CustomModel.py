@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, losses , Sequential
 from tensorflow.keras.models import Model
 
+
 class CustomModel(Model):
 
     def __init__(self, input_shape, batch_size= 10):
@@ -25,6 +26,7 @@ class CustomModel(Model):
         self.d4 = layers.Conv2DTranspose(8, kernel_size=(3,3), activation='relu', padding='same')
         self.output_layer = layers.Conv2D(1, kernel_size=(5,5), activation='sigmoid', padding='same')
         
+
     def call(self,x):
         x = self.input_layer(x)
         x = self.c1(x)
