@@ -2,7 +2,6 @@ import logging
 import os
 import json
 import cv2
-import random as rd
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -23,15 +22,21 @@ def loop_over_dataset(input_dir:str, output_dir:str, action, metadata_path: str 
                 raise
     
     if not metadata_path:
-        images = get_images_list(input_dir,format)
+        image_names = get_images_list(input_dir,format)
     else:
-        images = pd.read_csv(metadata_path)
-        images = images['image_id'].to_list()
-    for img in tqdm(images):
-        image = Image.open(f'{input_dir}\\{img}.{format}')
+        image_names = pd.read_csv(metadata_path)
+        image_names = image_names['image_id'].to_list()
+    for img in tqdm(image_names):
+
+        if format == 'png':
+            image = cv2.imread(f'{input_dir}\\{img}.{format}',  cv2.IMREAD_GRAYSCALE)
+        else:
+            image = cv2.imread(f'{input_dir}\\{img}.{format}')
+
         image = np.asarray(image)
         image = action(image)
-        cv2.imwrite(f'{output_dir}\\{img}.{format}',image) 
+
+        cv2.imwrite(f'{output_dir}\\{img}.{format}',image)
 
 
 def get_images_list(input_dir:str,format:str = 'jpg'):
@@ -69,7 +74,7 @@ def scramble(image,key):
         r, g , b = image[:,:,0],image[:,:,1],image[:,:,2]
         r , g , b = r.flatten() , g.flatten() , b.flatten()
         pr,pg,pb = [],[],[]
-        for  vr,vg,vb in zip(key['rp'],key['gp'],key['bp']):
+        for  vr,vg,vb in zip(key['rp'],key['rp'],key['rp']):
             pr.append(r[vr-1])
             pg.append(g[vg-1])
             pb.append(b[vb-1])
@@ -80,18 +85,18 @@ def scramble(image,key):
         mask = image[:,:]
         mask = mask.flatten()
         pmask = []
-        for  v in key['mp']:
+        for  v in key['rp']:
             pmask.append(mask[v-1])
         return np.reshape(pmask,(image.shape[0],image.shape[1]))
 
-
+# changed every key to rp for now
 def unscramble(image,key):
     assert(image.shape[0]*image.shape[1] == len(key['rp']))
     if len(image.shape) == 3 and image.shape[2] == 3:
         r , g , b = image[:,:,0],image[:,:,1],image[:,:,2]
         r , g , b = r.flatten() , g.flatten() , b.flatten()
         pr,pg,pb = [0]*len(r) ,[0]*len(g),[0]*len(b)
-        for i, (vr,vg,vb) in enumerate(zip(key['rp'],key['gp'],key['bp'])):
+        for i, (vr,vg,vb) in enumerate(zip(key['rp'],key['rp'],key['rp'])):
             pr[vr-1] , pg[vg-1] , pb[vb-1] = r[i] , g[i] , b[i]
         pr,pg,pb = np.reshape(pr,(image.shape[0],image.shape[1])),np.reshape(pg,(image.shape[0],image.shape[1])),np.reshape(pb,(image.shape[0],image.shape[1]))
         return np.dstack((pr,pg,pb))
@@ -100,7 +105,7 @@ def unscramble(image,key):
         mask = image[:,:]
         mask = mask.flatten()
         pmask = [0]*len(mask)
-        for i, v in enumerate(key['mp']):
+        for i, v in enumerate(key['rp']):
             pmask[v-1] = mask[i]
         return np.reshape(pmask,(image.shape[0],image.shape[1]))
 
@@ -138,7 +143,7 @@ def generate_pob_values(n:int = 10,r:int = 5) -> list:
         while i >= 0:
             B[i] = '1'
             i -= 1
-
+    pob_values = sorted(pob_values)
     return pob_values
 
 
