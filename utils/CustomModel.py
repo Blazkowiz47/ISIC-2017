@@ -1,7 +1,7 @@
 import tensorflow as tf
-from tensorflow.keras import layers, losses , Sequential
+from tensorflow.keras import layers
 from tensorflow.keras.models import Model
-
+import utils.Evaluation as ev
 
 class CustomModel(Model):
 
@@ -46,3 +46,95 @@ class CustomModel(Model):
         x = self.d4(x)
         x = self.output_layer(x) 
         return x
+
+class JaccardIndex(tf.keras.metrics.Metric):
+    def __init__(self, name='Jaccard Index',threshold=0.5,**kwargs) -> None:
+        super(JaccardIndex, self).__init__(name=name,**kwargs)
+        self.ji = self.add_weight(name='JI', initializer='zeros',dtype='float64')
+        self.count = self.add_weight(name='count', initializer='zeros',dtype='float64')
+        self.threshold = threshold
+        
+
+    def update_state(self,y_true, y_pred, sample_weight=None):
+        conf_mat = ev.get_confusion_matrix(y_true,y_pred,self.threshold)
+        self.ji.assign(self.count*self.ji)
+        self.ji.assign_add(ev.get_jaccard_index(conf_mat))
+        self.count.assign_add(tf.constant(1.,dtype=tf.float64))
+        self.ji.assign(self.ji/self.count)
+
+    def result(self):        
+        return self.ji
+
+
+class DiceIndex(tf.keras.metrics.Metric):
+    def __init__(self, name='Dice Index',threshold=0.5,**kwargs) -> None:
+        super(DiceIndex, self).__init__(name=name, **kwargs)
+        self.ji = self.add_weight(name='DI', initializer='zeros',dtype='float64')
+        self.count = self.add_weight(name='count', initializer='zeros',dtype='float64')
+        self.threshold = threshold
+    
+    def update_state(self,y_true, y_pred, sample_weight=None):
+        conf_mat = ev.get_confusion_matrix(y_true,y_pred,self.threshold)
+        self.ji.assign(self.count*self.ji)
+        self.ji.assign_add(ev.get_dice_coefficient(conf_mat))
+        self.count.assign_add(tf.constant(1.,dtype=tf.float64))
+        self.ji.assign(self.ji/self.count)
+        
+
+    def result(self):
+        return self.ji 
+
+
+class Sensitvity(tf.keras.metrics.Metric):
+    def __init__(self, name='Sensitivity',threshold=0.5,**kwargs) -> None:
+        super(Sensitvity, self).__init__(name=name, **kwargs)
+        self.ji = self.add_weight(name='SN', initializer='zeros',dtype='float64')
+        self.count = self.add_weight(name='count', initializer='zeros',dtype='float64')
+        self.threshold = threshold
+
+    def update_state(self,y_true, y_pred, sample_weight=None):
+        conf_mat = ev.get_confusion_matrix(y_true,y_pred,self.threshold)
+        self.ji.assign(self.count*self.ji)
+        self.ji.assign_add(ev.get_sensitivity(conf_mat))
+        self.count.assign_add(tf.constant(1.,dtype=tf.float64))
+        self.ji.assign(self.ji/self.count)
+        
+
+    def result(self):
+        return self.ji 
+
+
+class Specificity(tf.keras.metrics.Metric):
+    def __init__(self, name='Specificity',threshold=0.5,**kwargs) -> None:
+        super(Specificity, self).__init__(name=name, **kwargs)
+        self.ji = self.add_weight(name='SP', initializer='zeros',dtype='float64')
+        self.count = self.add_weight(name='count', initializer='zeros',dtype='float64')
+        self.threshold = threshold
+        
+    def update_state(self,y_true, y_pred, sample_weight=None):
+        conf_mat = ev.get_confusion_matrix(y_true,y_pred,self.threshold)
+        self.ji.assign(self.count*self.ji)
+        self.ji.assign_add(ev.get_specificity(conf_mat))
+        self.count.assign_add(tf.constant(1.,dtype=tf.float64))
+        self.ji.assign(self.ji/self.count)
+        
+    def result(self):
+        return self.ji
+
+
+class Accuracy(tf.keras.metrics.Metric):
+    def __init__(self, name='Accuracy',threshold=0.5,**kwargs) -> None:
+        super(Accuracy, self).__init__(name=name, **kwargs)
+        self.ji = self.add_weight(name='AC', initializer='zeros',dtype='float64')
+        self.count = self.add_weight(name='count', initializer='zeros',dtype='float64')
+        self.threshold = threshold
+
+    def update_state(self,y_true, y_pred, sample_weight=None):
+        conf_mat = ev.get_confusion_matrix(y_true,y_pred,self.threshold)
+        self.ji.assign(self.count*self.ji)
+        self.ji.assign_add(ev.get_accuracy(conf_mat))
+        self.count.assign_add(tf.constant(1.,dtype=tf.float64))
+        self.ji.assign(self.ji/self.count)
+
+    def result(self):
+        return self.ji 

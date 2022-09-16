@@ -32,17 +32,17 @@ class CustomDataset:
         img = tf.io.read_file(filepath)
         img = self.decode_img(img, self.image_channels)
         img = tf.reshape( img, (1,*self.out_shape,self.image_channels))
-        img = img / 255.0
+        img = img / tf.reduce_max(img)
         mask = tf.io.read_file(maskpath)
         mask = self.decode_img(mask, self.mask_channels)
         mask = tf.reshape(mask , (1,*self.out_shape,self.mask_channels))
-        mask = mask / 255.0
+        mask = mask / tf.reduce_max(mask)
         return img, mask
 
 
     def tf_dataset(self,x,y):
         dataset = tf.data.Dataset.from_tensor_slices((x,y))
-        dataset = dataset.shuffle(buffer_size=1000)
+        dataset = dataset.shuffle(buffer_size=500)
         dataset = dataset.map(self.process_path)
         # dataset = dataset.batch(batch_size=self.batch_size)
         # dataset = dataset.prefetch(2)

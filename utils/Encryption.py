@@ -4,45 +4,9 @@ import json
 import cv2
 import numpy as np
 import pandas as pd
-from PIL import Image
 from tqdm import tqdm
 from glob import glob
-
-
-def loop_over_dataset(input_dir:str, output_dir:str, action, metadata_path: str = None,format:str = 'jpg'):
-    if not os.path.exists(input_dir):
-        logging.debug("Input Directory doesnot exist")
-        raise
-    if not os.path.exists(output_dir):
-            try:
-                os.makedirs(output_dir)
-            except:
-                logging.debug(
-                    "Output Directory doesnot exist and cannot be created")
-                raise
-    
-    if not metadata_path:
-        image_names = get_images_list(input_dir,format)
-    else:
-        image_names = pd.read_csv(metadata_path)
-        image_names = image_names['image_id'].to_list()
-    for img in tqdm(image_names):
-
-        if format == 'png':
-            image = cv2.imread(f'{input_dir}\\{img}.{format}',  cv2.IMREAD_GRAYSCALE)
-        else:
-            image = cv2.imread(f'{input_dir}\\{img}.{format}')
-
-        image = np.asarray(image)
-        image = action(image)
-
-        cv2.imwrite(f'{output_dir}\\{img}.{format}',image)
-
-
-def get_images_list(input_dir:str,format:str = 'jpg'):
-    images = glob(os.path.join(input_dir+'\\*'))
-    images = sorted([x for x in images if x.endswith(format)])
-    return [image.split('\\')[-1].split('.')[0] for image in images]
+import utils as ut
 
 
 def encrypt(image, all_pob_numbers_list: list[int] = None):
@@ -70,11 +34,13 @@ def decrypt(image, all_pob_numbers_list: list[int] = None):
 
 def scramble(image,key):
     assert(image.shape[0]*image.shape[1] == len(key['rp']))
+    assert(image.shape[0]*image.shape[1] == len(key['gp']))
+    assert(image.shape[0]*image.shape[1] == len(key['bp']))
     if len(image.shape) == 3 and image.shape[2] == 3:
         r, g , b = image[:,:,0],image[:,:,1],image[:,:,2]
         r , g , b = r.flatten() , g.flatten() , b.flatten()
         pr,pg,pb = [],[],[]
-        for  vr,vg,vb in zip(key['rp'],key['rp'],key['rp']):
+        for  vr,vg,vb in zip(key['rp'],key['gp'],key['bp']):
             pr.append(r[vr-1])
             pg.append(g[vg-1])
             pb.append(b[vb-1])
@@ -85,7 +51,7 @@ def scramble(image,key):
         mask = image[:,:]
         mask = mask.flatten()
         pmask = []
-        for  v in key['rp']:
+        for  v in key['mp']:
             pmask.append(mask[v-1])
         return np.reshape(pmask,(image.shape[0],image.shape[1]))
 
@@ -96,7 +62,7 @@ def unscramble(image,key):
         r , g , b = image[:,:,0],image[:,:,1],image[:,:,2]
         r , g , b = r.flatten() , g.flatten() , b.flatten()
         pr,pg,pb = [0]*len(r) ,[0]*len(g),[0]*len(b)
-        for i, (vr,vg,vb) in enumerate(zip(key['rp'],key['rp'],key['rp'])):
+        for i, (vr,vg,vb) in enumerate(zip(key['rp'],key['gp'],key['bp'])):
             pr[vr-1] , pg[vg-1] , pb[vb-1] = r[i] , g[i] , b[i]
         pr,pg,pb = np.reshape(pr,(image.shape[0],image.shape[1])),np.reshape(pg,(image.shape[0],image.shape[1])),np.reshape(pb,(image.shape[0],image.shape[1]))
         return np.dstack((pr,pg,pb))
@@ -105,7 +71,7 @@ def unscramble(image,key):
         mask = image[:,:]
         mask = mask.flatten()
         pmask = [0]*len(mask)
-        for i, v in enumerate(key['rp']):
+        for i, v in enumerate(key['mp']):
             pmask[v-1] = mask[i]
         return np.reshape(pmask,(image.shape[0],image.shape[1]))
 
@@ -147,7 +113,7 @@ def generate_pob_values(n:int = 10,r:int = 5) -> list:
     return pob_values
 
 
-def calcC(n:int , r:int) -> int:
+def calC(n:int , r:int) -> int:
     r = r if n-r < r else n-r
     t = 1
     for tr in range(r+1,n+1):
@@ -163,14 +129,17 @@ def generate_permutation(length: int, R:int = 3.999) ->list:
     return key.tolist()    
 
 
-def generate_and_save_key(lenght:int, file_path: str):
+def generate_and_save_key(length:int, file_path: str, singular: bool = True):
     # rd, gd, bd are for rgb color channels in image
-    rp = generate_permutation(lenght)
-    gp = generate_permutation(lenght)
-    bp = generate_permutation(lenght)
-    # md is for the segmentation mask 
-    mp = generate_permutation(lenght)
-    
+    rp = generate_permutation(length)
+    if not singular:
+        gp = generate_permutation(length)
+        bp = generate_permutation(length)
+        # md is for the segmentation mask 
+        mp = generate_permutation(length)
+    else:
+        gp, bp, mp = rp, rp, rp
+
     with open(file_path, 'w+') as fp:
         json.dump({'rp': rp, 'gp': gp, 'bp': bp, 'mp': mp},fp,indent=4 )
 
@@ -181,8 +150,30 @@ def preprocess(image, out_shape = (256,256)):
 
 def encrypt_dir(input_dir:str, output_dir:str, metadata_path: str = None,format:str = 'jpg') -> None:
     pob_values =  generate_pob_values()
-    loop_over_dataset(input_dir,output_dir, lambda image : encrypt(image,pob_values), metadata_path,format)    
+    ut.loop_over_dataset(input_dir,output_dir, lambda image : encrypt(image,pob_values), metadata_path,format)    
 
 
 def preprocess_dir(input_dir:str, output_dir:str,format:str = 'jpg',out_shape:tuple=(256,256), metadata_path:str = None) -> None:
-    loop_over_dataset(input_dir,output_dir, lambda image : preprocess(image,out_shape),metadata_path,format)
+    ut.loop_over_dataset(input_dir,output_dir, lambda image : preprocess(image,out_shape),metadata_path,format)
+
+
+def get_pob_value(value: int,n: int = 10, r:int = 5 ):
+    j , temp = n , value
+    B = '0' * n
+    B = list(B)
+    for k in reversed(range(1,r+1)):
+        while True:
+            j -= 1
+            p = calC(j,k)
+            if temp >= p:
+                temp -= p
+                assert(j < n)
+                assert(j >= 0)
+                B[j] = '1'
+                break
+            if j < 0:
+                break
+    B = reversed(B)
+    return int(''.join(B),2)
+
+    
