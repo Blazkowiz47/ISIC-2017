@@ -176,4 +176,10 @@ def get_pob_value(value: int,n: int = 10, r:int = 5 ):
     B = reversed(B)
     return int(''.join(B),2)
 
-    
+
+def add_noise(image, max_value:int = 5):
+    image = image + np.random.choice( range(-max_value-1,max_value+1,1) , size=image.shape)
+    image = (image - image.min()) / (image.max() - image.min())
+    image = image * 255
+    image = image.astype(np.uint8) 
+    return image 
