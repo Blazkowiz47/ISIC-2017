@@ -16,9 +16,9 @@ class CustomDataset:
 
     # loads data
     def load_data(self,dir):
-        images = glob(os.path.join(dir , self.input_dir+'\\*'))
+        images = glob(os.path.join(dir , self.input_dir+'/*'))
         images = sorted([x for x in images if x.endswith('jpg')])
-        masks = sorted(glob(os.path.join(dir , self.mask_dir+'\\*')))
+        masks = sorted(glob(os.path.join(dir , self.mask_dir+'/*')))
         return images , masks
 
     # Decodes the image and resizes it into 
