@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from sklearn.cluster import DBSCAN, Birch
+from sklearn.cluster import DBSCAN, Birch, AffinityPropagation, MeanShift, OPTICS, AgglomerativeClustering
 from sklearn.mixture import GaussianMixture
 
 def kMeans(image,out_shape=None, K=2):
@@ -34,9 +34,30 @@ def birch(image, out_shape=None,n_clusters=2):
     labels = reform(np.array(labels),out_shape)
     return labels
 
+def affinity_propogation(image, out_shape=None,random_state=2):
+    labels = AffinityPropagation(random_state=random_state).fit_predict(image)
+    labels = reform(np.array(labels),out_shape)
+    return labels
+
+def mean_shift(image, out_shape=None,bandwidth=2):
+    labels = MeanShift(bandwidth=bandwidth).fit_predict(image)
+    labels = reform(np.array(labels),out_shape)
+    return labels
+
+def optics(image, out_shape=None,min_samples=2,max_eps=0.25):
+    labels = OPTICS(min_samples=min_samples,max_eps=max_eps).fit_predict(image)
+    labels = reform(np.array(labels),out_shape)
+    return labels
+
+def agglomerative(image, out_shape=None,n_clusters=2):
+    labels = AgglomerativeClustering(n_clusters=n_clusters).fit_predict(image)
+    labels = reform(np.array(labels),out_shape)
+    return labels
+
 def reform(labels, out_shape= None):
     if out_shape:
         labels = labels.reshape(out_shape)
     labels = (labels - labels.min()) / (labels.max() - labels.min())
     labels = labels * 255
     return labels
+
